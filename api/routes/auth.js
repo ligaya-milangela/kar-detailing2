@@ -9,7 +9,7 @@ const ADMIN_SECRET = "admin123456"; // <- Change this to your desired admin pass
 
 // REGISTER
 router.post('/register', async (req, res) => {
-  
+  console.log(req.body)
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'All fields required.' });
 
@@ -31,7 +31,7 @@ router.post('/register', async (req, res) => {
 
 // LOGIN
 router.post('/login', async (req, res) => {
-  
+  console.log(req.body)
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'All fields required.' });
 
