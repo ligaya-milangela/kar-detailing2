@@ -141,47 +141,55 @@ export default function BookingPage() {
     if (e.target.name === "service") setPrice("");
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-    setLoading(true);
+async function handleSubmit(e) {
+  e.preventDefault();
+  setError("");
+  setSuccess("");
+  setLoading(true);
 
-    try {
-      await api.post("/bookings", form);
-      setSuccess("🎉 Booking submitted successfully! We'll contact you soon to confirm the details.");
-      
-      // Reset form but preserve autofilled data
-      if (user && user.email) {
-        const { data } = await api.get(`/profile?email=${encodeURIComponent(user.email)}`);
-        setForm(f => ({
-          ...f,
-          name: data.name || "",
-          contact: data.contactNumber || "",
-          date: "",
-          time: "",
-          service: "",
-          notes: ""
-        }));
-      } else {
-        setForm({
-          name: "",
-          contact: "",
-          date: "",
-          time: "",
-          service: "",
-          notes: ""
-        });
-      }
-      setPrice("");
-      setStep(1);
-      setTimeout(() => setSuccess(""), 5000);
-    } catch (err) {
-      setError(err.response?.data?.error || "Failed to submit booking. Please try again.");
-    } finally {
-      setLoading(false);
+  try {
+    const token = localStorage.getItem("token"); 
+    await api.post("/bookings", form, {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : undefined, 
+      },
+      withCredentials: true,
+    });
+
+    setSuccess("🎉 Booking submitted successfully! We'll contact you soon to confirm the details.");
+    if (user && user.email) {
+      const { data } = await api.get(`/profile?email=${encodeURIComponent(user.email)}`);
+      setForm(f => ({
+        ...f,
+        name: data.name || "",
+        contact: data.contactNumber || "",
+        date: "",
+        time: "",
+        service: "",
+        notes: ""
+      }));
+    } else {
+      setForm({
+        name: "",
+        contact: "",
+        date: "",
+        time: "",
+        service: "",
+        notes: ""
+      });
     }
+
+    setPrice("");
+    setStep(1);
+
+    setTimeout(() => setSuccess(""), 5000);
+  } catch (err) {
+    setError(err.response?.data?.error || "Failed to submit booking. Please try again.");
+  } finally {
+    setLoading(false);
   }
+}
+
 
   const serviceOptions = getDropdownOptions(suggestion);
   const selectedServiceInfo = form.service ? serviceOptions.find(opt => opt.value === form.service) : null;
