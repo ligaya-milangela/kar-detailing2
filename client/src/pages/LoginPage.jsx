@@ -25,6 +25,8 @@ export default function LoginPage() {
       const res = await api.post("/auth/login", form);
       setUser(res.data.user);
       setSuccess("Login successful!");
+      const randomToken = Math.random().toString(36).substring(2);
+      localStorage.setItem("token", randomToken);
       setTimeout(() => navigate("/booking"), 1000);
     } catch (err) {
       setError(err.response?.data?.error || "Login failed.");
