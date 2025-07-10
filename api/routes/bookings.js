@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const Booking = require('../models/Booking');
-const User = require('../models/User'); 
+const User = require('../models/User');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret123";
@@ -9,21 +9,25 @@ const JWT_SECRET = process.env.JWT_SECRET || "secret123";
 // Middleware: Authenticate using JWT token from Authorization header
 function auth(req, res, next) {
   const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: "Missing token" });
+  if (!authHeader) {
+    return res.status(401).json({ error: "Missing token" });
+  }
 
   const token = authHeader.split(" ")[1];
-  if (!token) return res.status(401).json({ error: 'No token provided' });
+  if (!token) {
+    return res.status(401).json({ error: "No token provided" });
+  }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; 
+    req.user = decoded;
     next();
   } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
+    return res.status(401).json({ error: "Invalid token" });
   }
 }
 
-
+// ✅ Create a new booking
 router.post('/', auth, async (req, res) => {
   try {
     const { name, contact, date, time, service, notes } = req.body;
@@ -32,21 +36,21 @@ router.post('/', auth, async (req, res) => {
       name,
       contact,
       date,
-      time,             
+      time,
       service,
       notes,
-      user: req.user.id, 
+      user: req.user.id,
       status: "Pending"
     });
 
     res.status(201).json(booking);
   } catch (err) {
-    console.error(err);
+    console.error("Booking creation error:", err);
     res.status(500).json({ error: 'Failed to create booking' });
   }
 });
 
-
+// ✅ Get all bookings (admin or calendar view)
 router.get('/', auth, async (req, res) => {
   try {
     const bookings = await Booking.find({}).sort({ date: -1 });
@@ -57,11 +61,12 @@ router.get('/', auth, async (req, res) => {
 
     res.json(bookingsWithStatus);
   } catch (err) {
+    console.error("Booking fetch error:", err);
     res.status(500).json({ error: 'Failed to load bookings' });
   }
 });
 
-
+// ✅ Admin: Mark a booking as completed
 router.put('/status/:id', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -70,14 +75,16 @@ router.put('/status/:id', auth, async (req, res) => {
     }
 
     const booking = await Booking.findById(req.params.id);
-    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
 
     booking.status = "Completed";
     await booking.save();
 
     res.json({ message: "Booking marked as completed", status: "Completed" });
   } catch (err) {
-    console.error(err);
+    console.error("Update status error:", err);
     res.status(500).json({ error: "Failed to update status" });
   }
 });
