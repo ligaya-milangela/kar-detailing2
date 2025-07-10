@@ -149,6 +149,7 @@ async function handleSubmit(e) {
 
   try {
     const token = localStorage.getItem("token"); 
+    console.log("Token from localStorage:", token);
     await api.post("/bookings", form, {
       headers: {
         Authorization: token ? `Bearer ${token}` : undefined, 
