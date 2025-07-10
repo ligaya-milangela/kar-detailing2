@@ -2,9 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-
-const JWT_SECRET = process.env.JWT_SECRET || "secret123";
+const crypto = require("crypto");
 
 // REGISTER
 router.post("/register", async (req, res) => {
@@ -38,11 +36,13 @@ router.post("/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: "Invalid email or password." });
 
-    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+    const token = crypto.randomBytes(32).toString("hex");
+    user.token = token;
+    await user.save();
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false, // Set true for HTTPS
+      secure: false, // Set true in production
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
@@ -55,24 +55,32 @@ router.post("/login", async (req, res) => {
 });
 
 // LOGOUT
-router.post("/logout", (req, res) => {
+router.post("/logout", async (req, res) => {
+  const token = req.cookies.token;
+  if (token) {
+    const user = await User.findOne({ token });
+    if (user) {
+      user.token = null;
+      await user.save();
+    }
+  }
   res.clearCookie("token");
   res.json({ message: "Logged out" });
 });
 
-// GET PROFILE (persistent login)
+// GET PROFILE
 router.get("/profile", async (req, res) => {
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: "Not logged in" });
 
   try {
-    const data = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(data.id).select("-password");
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const user = await User.findOne({ token }).select("-password");
+    if (!user) return res.status(401).json({ error: "Invalid session" });
 
     res.json(user);
   } catch (err) {
-    res.status(401).json({ error: "Invalid token" });
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong." });
   }
 });
 
