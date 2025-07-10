@@ -1,67 +1,69 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const Booking = require('../models/Booking');
-const User = require('../models/User'); // Needed for admin check
+const User = require('../models/User'); 
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret123";
 
-// Middleware: Authenticate using JWT token from cookies
+// Middleware: Authenticate using JWT token from Authorization header
 function auth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Missing token" });
 
   const token = authHeader.split(" ")[1];
-  console.log(token);
-  if (!token) return res.status(401).json({ error: 'No token' });
+  if (!token) return res.status(401).json({ error: 'No token provided' });
+
   try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded; 
     next();
   } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
+    return res.status(401).json({ error: 'Invalid token' });
   }
 }
 
-// Create a new booking (must be logged in)
+
 router.post('/', auth, async (req, res) => {
-    
   try {
-    const { name, contact, date, service, notes } = req.body;
+    const { name, contact, date, time, service, notes } = req.body;
+
     const booking = await Booking.create({
       name,
       contact,
       date,
+      time,             
       service,
       notes,
-      user: req.user.id,
-      status: "Pending" // Default status for new bookings
+      user: req.user.id, 
+      status: "Pending"
     });
+
     res.status(201).json(booking);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to create booking' });
   }
 });
 
-// Get all bookings for ALL users (for calendar)
+
 router.get('/', auth, async (req, res) => {
-    
   try {
     const bookings = await Booking.find({}).sort({ date: -1 });
-    // Always return status (default to "Pending" if not set)
     const bookingsWithStatus = bookings.map(b => ({
       ...b.toObject(),
       status: b.status || "Pending"
     }));
+
     res.json(bookingsWithStatus);
   } catch (err) {
     res.status(500).json({ error: 'Failed to load bookings' });
   }
 });
 
-// --- MARK AS FINISHED ROUTE (Admin only) ---
+
 router.put('/status/:id', auth, async (req, res) => {
-    
   try {
-    // Fetch user and check if admin
     const user = await User.findById(req.user.id);
     if (!user || !user.isAdmin) {
       return res.status(403).json({ error: 'Admin access required' });
@@ -73,8 +75,9 @@ router.put('/status/:id', auth, async (req, res) => {
     booking.status = "Completed";
     await booking.save();
 
-    res.json({ message: "Booking marked as finished", status: "Completed" });
+    res.json({ message: "Booking marked as completed", status: "Completed" });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to update status" });
   }
 });
