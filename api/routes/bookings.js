@@ -4,12 +4,7 @@ const User = require('../models/User');
 const router = express.Router();
 
 async function auth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: "Missing token" });
-  }
-
-  const token = authHeader.split(" ")[1];
+  const token = req.cookies.token;
   if (!token) {
     return res.status(401).json({ error: "No token provided" });
   }
@@ -23,8 +18,8 @@ async function auth(req, res, next) {
     req.user = user;
     next();
   } catch (err) {
-    console.error("Auth middleware error:", err);
-    return res.status(500).json({ error: "Authentication failed" });
+    console.error("token error:", err);
+    return res.status(500).json({ error: "invalid token" });
   }
 }
 

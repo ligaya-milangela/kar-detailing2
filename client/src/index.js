@@ -10,6 +10,9 @@ root.render(
     <App />
   </React.StrictMode>
 );
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
+
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
