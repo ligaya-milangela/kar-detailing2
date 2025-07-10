@@ -6,7 +6,6 @@ const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret123";
 
-// Middleware: Authenticate using JWT token from Authorization header
 function auth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -27,7 +26,6 @@ function auth(req, res, next) {
   }
 }
 
-// ✅ Create a new booking
 router.post('/', auth, async (req, res) => {
   try {
     const { name, contact, date, time, service, notes } = req.body;
@@ -50,7 +48,6 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// ✅ Get all bookings (admin or calendar view)
 router.get('/', auth, async (req, res) => {
   try {
     const bookings = await Booking.find({}).sort({ date: -1 });
@@ -66,7 +63,6 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// ✅ Admin: Mark a booking as completed
 router.put('/status/:id', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
