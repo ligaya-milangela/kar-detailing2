@@ -1,12 +1,9 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret123";
-
-function auth(req, res, next) {
+async function auth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     return res.status(401).json({ error: "Missing token" });
@@ -18,10 +15,16 @@ function auth(req, res, next) {
   }
 
   try {
-     req.user = user;
+    const user = await User.findOne({ token });
+    if (!user) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    req.user = user;
     next();
   } catch (err) {
-    return res.status(401).json({ error: "Invalid token" });
+    console.error("Auth middleware error:", err);
+    return res.status(500).json({ error: "Authentication failed" });
   }
 }
 
@@ -36,7 +39,7 @@ router.post('/', auth, async (req, res) => {
       time,
       service,
       notes,
-      user: req.user.id,
+      user: req.user._id, 
       status: "Pending"
     });
 
@@ -50,6 +53,7 @@ router.post('/', auth, async (req, res) => {
 router.get('/', auth, async (req, res) => {
   try {
     const bookings = await Booking.find({}).sort({ date: -1 });
+
     const bookingsWithStatus = bookings.map(b => ({
       ...b.toObject(),
       status: b.status || "Pending"
@@ -64,8 +68,7 @@ router.get('/', auth, async (req, res) => {
 
 router.put('/status/:id', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (!user || !user.isAdmin) {
+    if (!req.user.isAdmin) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
